@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Rebajaceros</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; justify-content: center; padding: 40px; background: #eef2f7; }
+        .card { background: white; padding: 2rem; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 400px; text-align: center; }
+        select, button { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; font-size: 16px; border: 1px solid #ddd; }
+        button { background: #28a745; color: white; border: none; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        button:hover { background: #218838; }
+        .setup-section { border-bottom: 2px dashed #eee; margin-bottom: 20px; padding-bottom: 10px; }
+        .step { background: #f8f9fa; margin: 5px 0; padding: 10px; border-radius: 5px; font-family: monospace; font-size: 1.1em; text-align: left; }
+        .highlight { color: #d9534f; font-weight: bold; font-size: 1.2em; }
+        .final-zero { color: #28a745; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h2>Rebajaceros</h2>
+        
+        <div class="setup-section">
+            <label>Dificultad (Cifras):</label>
+            <select id="difficulty">
+                <option value="100">Fácil (2 cifras)</option>
+                <option value="1000" selected>Normal (3 cifras)</option>
+                <option value="10000">Difícil (4 cifras)</option>
+                <option value="100000">Experto (5 cifras)</option>
+            </select>
+            <button onclick="generarAutomatico()">Generar Automatico</button>
+        </div>
+
+        <div id="displayArea"></div>
+    </div>
+
+    <script>
+        function generarAutomatico() {
+            const range = parseInt(document.getElementById('difficulty').value);
+            // Genera un número aleatorio basado en el rango
+            const sustraendo = Math.floor(Math.random() * (range - (range/10)) + (range/10));
+            const inicial = sustraendo * 10;
+            
+            const area = document.getElementById('displayArea');
+            let html = `<p>Número inicial: <br><span class="highlight">${inicial.toLocaleString()}</span></p>`;
+            html += `<p>Resta 10 veces: <strong>${sustraendo.toLocaleString()}</strong></p>`;
+            html += `<hr>`;
+
+            let actual = inicial;
+            for (let i = 1; i <= 10; i++) {
+                let anterior = actual;
+                actual -= sustraendo;
+                let claseFinal = (actual === 0) ? 'final-zero' : '';
+                html += `<div class="step">${i}) ${anterior.toLocaleString()} - ${sustraendo.toLocaleString()} = <span class="${claseFinal}">${actual.toLocaleString()}</span></div>`;
+            }
+
+            area.innerHTML = html;
+        }
+    </script>
+</body>
+</html>
+
