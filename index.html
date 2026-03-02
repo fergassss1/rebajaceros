@@ -1,132 +1,219 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rebajaceros</title>
-    <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; display: flex; justify-content: center; padding: 20px; }
-        .game-container { background: white; padding: 2rem; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); width: 100%; max-width: 450px; text-align: center; }
-        .header { border-bottom: 2px solid #eee; margin-bottom: 20px; padding-bottom: 10px; }
-        .challenge-box { background: #e7f3ff; padding: 15px; border-radius: 10px; margin-bottom: 20px; font-size: 1.2rem; }
-        .number-big { color: #007bff; font-weight: bold; font-size: 1.5rem; }
-        .step-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; padding: 8px; border-radius: 8px; background: #fafafa; }
-        .step-row.locked { opacity: 0.4; pointer-events: none; }
-        .step-row.success { background: #d4edda; border: 1px solid #c3e6cb; }
-        input { width: 120px; padding: 8px; border: 2px solid #ddd; border-radius: 5px; text-align: center; font-size: 1rem; }
-        input:focus { border-color: #007bff; outline: none; }
-        input.error { border-color: #dc3545; background: #fff3f3; }
-        .btn-new { background: #28a745; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-bottom: 20px; }
-        .btn-new:hover { background: #218838; }
-        .msg { font-weight: bold; margin-top: 10px; min-height: 24px; }
-    </style>
+<meta charset="UTF-8">
+<title>Rebajaceros</title>
+
+<!-- Material Design 3 -->
+<script type="module" src="https://unpkg.com/@material/web/all.js?module"></script>
+
+<!-- Google Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@8..144,100..1000&family=Google+Sans+Code:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --md-sys-color-primary: #6750A4;
+}
+
+body {
+  margin: 0;
+  background: #f4f2fa;
+  display: flex;
+  justify-content: center;
+  padding: 40px;
+  font-family: "Google Sans Flex", sans-serif;
+}
+
+.card {
+  background: white;
+  padding: 32px;
+  border-radius: 28px;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.08);
+  width: 440px;
+  text-align: center;
+}
+
+h2, h3 {
+  margin-top: 0;
+  font-weight: 600;
+}
+
+.operacion {
+  font-family: "Google Sans Code", monospace;
+  font-size: 44px;
+  text-align: right;
+  margin-top: 24px;
+}
+
+.linea {
+  border-bottom: 3px solid #333;
+  margin: 6px 0 10px 0;
+}
+
+.resultado input {
+  width: 42px;
+  font-size: 44px;
+  text-align: center;
+  border: none;
+  border-bottom: 2px solid #ccc;
+  outline: none;
+  font-family: "Google Sans Code", monospace;
+}
+
+.resultado input.error {
+  border-bottom: 2px solid #d32f2f;
+}
+
+.resultado input.correcto {
+  border-bottom: 2px solid #2e7d32;
+}
+
+.botones {
+  margin-top: 24px;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+</style>
 </head>
+
 <body>
 
-<div class="game-container">
-    <div class="header">
-        <h1>Rebajaceros</h1>
-        <p>Resta 10 veces el número hasta llegar a 0</p>
-        <button class="btn-new" onclick="iniciarJuego()">Nuevo partida aleatoria</button>
-    </div>
+<div class="card" id="menu">
+  <h2>Rebajaceros</h2>
 
-    <div id="gameArea" style="display:none;">
-        <div class="challenge-box">
-            Empiezas con: <span class="number-big" id="valInicial"></span><br>
-            Resta siempre: <span class="number-big" id="valSustraendo"></span>
-        </div>
-        
-        <div id="stepsContainer"></div>
-        <div id="feedback" class="msg"></div>
-    </div>
+  <p>Haz las 10 restas para que dé 0!</p>
+  <md-outlined-text-field id="cifras" type="number" value="6"></md-outlined-text-field>
+
+  <br><br>
+
+  <md-filled-button onclick="generarAleatorio()">Número Aleatorio</md-filled-button>
+
+  <p>O escribir número (debe terminar en 0)</p>
+  <md-outlined-text-field id="numeroManual" type="number"></md-outlined-text-field>
+
+  <br><br>
+  <md-filled-button onclick="empezarManual()">Empezar</md-filled-button>
 </div>
 
+<div class="card" id="juego" style="display:none;"></div>
+
 <script>
-    let sustraendo, actual;
+let numeroInicial = 0;
+let actual = 0;
+let restaFija = 0;
 
-    function iniciarJuego() {
-        // Generamos un número aleatorio de 3 o 4 cifras
-        sustraendo = Math.floor(Math.random() * 9000) + 100;
-        actual = sustraendo * 10;
-        
-        document.getElementById('valInicial').innerText = (actual).toLocaleString();
-        document.getElementById('valSustraendo').innerText = (sustraendo).toLocaleString();
-        document.getElementById('gameArea').style.display = 'block';
-        document.getElementById('feedback').innerText = "";
-        
-        const container = document.getElementById('stepsContainer');
-        container.innerHTML = "";
+function generarAleatorio(){
+  let cifras = parseInt(document.getElementById("cifras").value);
+  let min = Math.pow(10, cifras-1);
+  let max = Math.pow(10, cifras) - 1;
+  let numero;
 
-        // Crear las 10 filas de restas
-        let valorPrevio = actual;
-        for (let i = 1; i <= 10; i++) {
-            const row = document.createElement('div');
-            row.className = `step-row ${i > 1 ? 'locked' : ''}`;
-            row.id = `row-${i}`;
-            
-            row.innerHTML = `
-                <span>${i}) ${valorPrevio.toLocaleString()} - ${sustraendo.toLocaleString()} = </span>
-                <input type="number" id="input-${i}" onchange="comprobar(${i}, ${valorPrevio - sustraendo})">
-            `;
-            container.appendChild(row);
-            valorPrevio -= sustraendo;
-        }
-        document.getElementById('input-1').focus();
+  do{
+    numero = Math.floor(Math.random()*(max-min+1))+min;
+  }while(numero % 10 !== 0);
+
+  empezarJuego(numero);
+}
+
+function empezarManual(){
+  let numero = parseInt(document.getElementById("numeroManual").value);
+
+  if(isNaN(numero) || numero<=0 || numero%10!==0){
+    alert("Debe ser un número válido que termine en 0");
+    return;
+  }
+
+  empezarJuego(numero);
+}
+
+function empezarJuego(numero){
+  numeroInicial = numero;
+  actual = numero;
+  restaFija = Math.floor(numeroInicial/10);
+
+  document.getElementById("menu").style.display="none";
+  document.getElementById("juego").style.display="block";
+
+  crearOperacion();
+}
+
+function crearOperacion(){
+
+  if(actual===0){
+    document.getElementById("juego").innerHTML=
+      "<h2>🎉 ¡Has llegado a 0!</h2><br><md-filled-button onclick='volverMenu()'>Volver</md-filled-button>";
+    return;
+  }
+
+  let correcto = (actual - restaFija).toString();
+
+  let html = `
+  <h3>Resta paso a paso</h3>
+  <div class="operacion">
+      <div>${actual}</div>
+      <div>- ${restaFija}</div>
+      <div class="linea"></div>
+      <div class="resultado" id="resultado"></div>
+  </div>
+
+  <div class="botones">
+      <md-filled-button onclick="comprobar()">Comprobar</md-filled-button>
+      <md-outlined-button onclick="ayuda()">Ayuda</md-outlined-button>
+      <md-text-button onclick="volverMenu()">Salir</md-text-button>
+  </div>
+  `;
+
+  document.getElementById("juego").innerHTML = html;
+
+  let contenedor = document.getElementById("resultado");
+
+  for(let i=0;i<correcto.length;i++){
+    let input = document.createElement("input");
+    input.maxLength=1;
+    contenedor.appendChild(input);
+  }
+}
+
+function comprobar(){
+  let correcto = (actual - restaFija).toString();
+  let inputs = document.querySelectorAll(".resultado input");
+  let todoBien=true;
+
+  inputs.forEach((input,i)=>{
+    if(input.value!==correcto[i]){
+      input.classList.add("error");
+      todoBien=false;
+    }else{
+      input.classList.remove("error");
+      input.classList.add("correcto");
     }
+  });
 
-    function comprobar(step, resultadoCorrecto) {
-        const input = document.getElementById(`input-${step}`);
-        const userVal = parseInt(input.value);
-        const feedback = document.getElementById('feedback');
+  if(todoBien){
+    actual -= restaFija;
+    setTimeout(crearOperacion,600);
+  }
+}
 
-        if (userVal === resultadoCorrecto) {
-            input.classList.remove('error');
-            document.getElementById(`row-${step}`).classList.add('success');
-            input.disabled = true;
-            
-            if (step < 10) {
-                const nextRow = document.getElementById(`row-${step + 1}`);
-                nextRow.classList.remove('locked');
-                document.getElementById(`input-${step + 1}`).focus();
-                feedback.innerText = "¡Bien! Siguiente resta...";
-                feedback.style.color = "#28a745";
-            } else {
-                feedback.innerText = "¡PERFECTO! Has llegado a 0 sin errores. 🎉";
-                feedback.style.color = "#28a745";
-            }
-        } else {
-            input.classList.add('error');
-            feedback.innerText = "¡Error! Revisa la resta.";
-            feedback.style.color = "#dc3545";
-        }
+function ayuda(){
+  let correcto = (actual - restaFija).toString();
+  let inputs = document.querySelectorAll(".resultado input");
+
+  for(let i=0;i<inputs.length;i++){
+    if(inputs[i].value!==correcto[i]){
+      inputs[i].value=correcto[i];
+      inputs[i].classList.add("correcto");
+      break;
     }
+  }
+}
+
+function volverMenu(){
+  document.getElementById("menu").style.display="block";
+  document.getElementById("juego").style.display="none";
+}
 </script>
 
 </body>
 </html>
-    <script>
-        function generarAutomatico() {
-            const range = parseInt(document.getElementById('difficulty').value);
-            // Genera un número aleatorio basado en el rango
-            const sustraendo = Math.floor(Math.random() * (range - (range/10)) + (range/10));
-            const inicial = sustraendo * 10;
-            
-            const area = document.getElementById('displayArea');
-            let html = `<p>Número inicial: <br><span class="highlight">${inicial.toLocaleString()}</span></p>`;
-            html += `<p>Resta 10 veces: <strong>${sustraendo.toLocaleString()}</strong></p>`;
-            html += `<hr>`;
-
-            let actual = inicial;
-            for (let i = 1; i <= 10; i++) {
-                let anterior = actual;
-                actual -= sustraendo;
-                let claseFinal = (actual === 0) ? 'final-zero' : '';
-                html += `<div class="step">${i}) ${anterior.toLocaleString()} - ${sustraendo.toLocaleString()} = <span class="${claseFinal}">${actual.toLocaleString()}</span></div>`;
-            }
-
-            area.innerHTML = html;
-        }
-    </script>
-</body>
-</html>
-
