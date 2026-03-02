@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Rebajaceros</title>
+
+<script type="module" src="https://unpkg.com/@material/web/all.js?module"></script>
+
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@8..144,100..1000&family=Google+Sans+Code:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+<style>
+body {
+  margin: 0;
+  background: #f4f2fa;
+  display: flex;
+  justify-content: center;
+  padding: 40px;
+  font-family: "Google Sans Flex", sans-serif;
+}
+
+.card {
+  background: white;
+  padding: 32px;
+  border-radius: 28px;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.08);
+  width: 560px;
+  text-align: center;
+}
+
+.operacion {
+  font-family: "Google Sans Code", monospace;
+  font-size: 44px;
+  margin-top: 24px;
+  display: inline-block; /* Para que la línea no ocupe todo el ancho si no es necesario */
+}
+
+.fila {
+  display: grid;
+  justify-content: end;
+  gap: 4px;
+}
+
+.celda {
+  width: 48px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.linea {
+  border-bottom: 3px solid #333;
+  margin: 8px 0;
+}
+
+.resultado {
+    display: grid;
+    gap: 4px;
+    justify-content: end;
+}
+
+.resultado input {
+  width: 48px;
+  font-size: 44px;
+  text-align: center;
+  border: none;
+  border-bottom: 2px solid #ccc;
+  outline: none;
+  font-family: "Google Sans Code", monospace;
+  background: transparent;
+}
+
+.resultado input.error {
+  border-bottom: 2px solid #d32f2f;
+  color: #d32f2f;
+}
+
+.resultado input.correcto {
+  border-bottom: 2px solid #2e7d32;
+  color: #2e7d32;
+}
+
+/* Ocultar flechas de input number */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.botones {
+  margin-top: 32px;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="card" id="menu">
+  <h2>Rebajaceros</h2>
+  <p>Resta 10 veces hasta llegar a 0!</p>
+  <md-outlined-text-field label="Cifras" id="cifras" type="number" value="6"></md-outlined-text-field>
+  <br><br>
+  <md-filled-button onclick="generarAleatorio()">Número Aleatorio</md-filled-button>
+  <p>O escribir número (debe terminar en 0)</p>
+  <md-outlined-text-field label="Número manual" id="numeroManual" type="number"></md-outlined-text-field>
+  <br><br>
+  <md-filled-button onclick="empezarManual()">Empezar</md-filled-button>
+</div>
+
+<div class="card" id="juego" style="display:none;"></div>
+
+<script>
+let numeroInicial = 0;
+let actual = 0;
+let restaFija = 0;
+
+function generarAleatorio(){
+  let cifras = parseInt(document.getElementById("cifras").value);
+  let min = Math.pow(10, cifras-1);
+  let max = Math.pow(10, cifras) - 1;
+  let numero;
+
+  do{
+    numero = Math.floor(Math.random()*(max-min+1))+min;
+  }while(numero % 10 !== 0);
+
+  empezarJuego(numero);
+}
+
+function empezarManual(){
+  let numero = parseInt(document.getElementById("numeroManual").value);
+  if(isNaN(numero) || numero<=0 || numero%10!==0){
+    alert("Debe ser un número válido que termine en 0");
+    return;
+  }
+  empezarJuego(numero);
+}
+
+function empezarJuego(numero){
+  numeroInicial = numero;
+  actual = numero;
+  restaFija = Math.floor(numeroInicial/10);
+  document.getElementById("menu").style.display="none";
+  document.getElementById("juego").style.display="block";
+  crearOperacion();
+}
+
+function crearOperacion(){
+  if(actual===0){
+    document.getElementById("juego").innerHTML =
+      "<h2>¡Has llegado a 0!</h2><br><md-filled-button onclick='volverMenu()'>Volver al inicio</md-filled-button>";
+    return;
+  }
+
+  let sigResultado = (actual - restaFija).toString();
+  let actualStr = actual.toString();
+  let restaStr = restaFija.toString();
+
+  // Determinamos el ancho de la rejilla (+1 para el signo menos)
+  let maxColumnas = Math.max(actualStr.length, restaStr.length, sigResultado.length) + 1;
+
+  let html = `
+  <h3>Resta ${restaFija}</h3>
+  <div class="operacion">
+      <div class="fila" style="grid-template-columns: repeat(${maxColumnas}, 48px)">
+        ${generarCeldas(actualStr, maxColumnas)}
+      </div>
+
+      <div class="fila" style="grid-template-columns: repeat(${maxColumnas}, 48px)">
+        ${generarCeldas(restaStr, maxColumnas, true)}
+      </div>
+
+      <div class="linea"></div>
+
+      <div class="resultado" id="resultado" style="grid-template-columns: repeat(${maxColumnas}, 48px)">
+      </div>
+  </div>
+
+  <div class="botones">
+      <md-filled-button onclick="comprobar()">Comprobar</md-filled-button>
+      <md-outlined-button onclick="ayuda()">Ayuda</md-outlined-button>
+      <md-text-button onclick="volverMenu()">Salir</md-text-button>
+  </div>
+  `;
+
+  document.getElementById("juego").innerHTML = html;
+
+  // Crear inputs dinámicamente
+  let contenedor = document.getElementById("resultado");
+  for(let i=0; i < maxColumnas; i++){
+    let input = document.createElement("input");
+    input.maxLength = 1;
+    input.type = "text";
+    input.inputMode = "numeric";
+    
+    // Si la columna está vacía en el resultado (ej. el resultado tiene menos dígitos que el ancho total)
+    // calculamos si este input es necesario
+    let posicionDesdeDerecha = maxColumnas - 1 - i;
+    if (posicionDesdeDerecha >= sigResultado.length) {
+        input.style.visibility = "hidden";
+    }
+
+    input.addEventListener("input", manejarEscritura);
+    input.addEventListener("keydown", manejarBorrado);
+    contenedor.appendChild(input);
+  }
+
+  // Poner el foco en el último input (unidades)
+  contenedor.lastChild.focus();
+}
+
+function generarCeldas(numeroStr, total, esResta=false){
+  let contenido = "";
+  let espaciosVacios = total - numeroStr.length;
+
+  for(let i=0; i < espaciosVacios; i++){
+    // Si es la fila de resta, ponemos el signo en la celda justo antes del número
+    if(esResta && i === (espaciosVacios - 1)){
+      contenido += `<div class="celda">-</div>`;
+    } else {
+      contenido += `<div class="celda"></div>`;
+    }
+  }
+
+  for(let i=0; i < numeroStr.length; i++){
+    contenido += `<div class="celda">${numeroStr[i]}</div>`;
+  }
+  return contenido;
+}
+
+function manejarEscritura(e){
+  let input = e.target;
+  input.value = input.value.replace(/[^0-9]/g,"");
+
+  if(input.value.length === 1){
+    let anterior = input.previousElementSibling;
+    // Solo saltar si el anterior es visible (no es un espacio vacío)
+    if(anterior && anterior.style.visibility !== "hidden") {
+        anterior.focus();
+    }
+  }
+}
+
+function manejarBorrado(e){
+  if(e.key === "Backspace" && e.target.value === ""){
+    let siguiente = e.target.nextElementSibling;
+    if(siguiente) siguiente.focus();
+  }
+}
+
+function comprobar(){
+  let correctoStr = (actual - restaFija).toString();
+  let inputs = Array.from(document.querySelectorAll(".resultado input")).filter(inp => inp.style.visibility !== "hidden");
+  
+  // Los inputs se crean de izquierda a derecha, igual que el string del resultado
+  let respuestaUsuario = inputs.map(inp => inp.value).join("");
+
+  if(respuestaUsuario === correctoStr){
+    inputs.forEach(inp => {
+        inp.classList.remove("error");
+        inp.classList.add("correcto");
+    });
+    actual -= restaFija;
+    setTimeout(crearOperacion, 600);
+  } else {
+    // Marcar errores individualmente
+    inputs.forEach((inp, i) => {
+        if(inp.value !== correctoStr[i]){
+            inp.classList.add("error");
+        } else {
+            inp.classList.remove("error");
+            inp.classList.add("correcto");
+        }
+    });
+  }
+}
+
+function ayuda(){
+  let correctoStr = (actual - restaFija).toString();
+  let inputs = Array.from(document.querySelectorAll(".resultado input")).filter(inp => inp.style.visibility !== "hidden");
+
+  // Ayuda con el primer dígito vacío que encuentre de derecha a izquierda
+  for(let i = inputs.length - 1; i >= 0; i--){
+    if(inputs[i].value !== correctoStr[i]){
+      inputs[i].value = correctoStr[i];
+      inputs[i].classList.add("correcto");
+      inputs[i].focus();
+      break;
+    }
+  }
+}
+
+function volverMenu(){
+  document.getElementById("menu").style.display="block";
+  document.getElementById("juego").style.display="none";
+}
+</script>
+
+</body>
+</html>
