@@ -4,8 +4,10 @@
 <meta charset="UTF-8">
 <title>Rebajaceros</title>
 
+<!-- Material Design 3 -->
 <script type="module" src="https://unpkg.com/@material/web/all.js?module"></script>
 
+<!-- Google Fonts -->
 <link href="https://fonts.googleapis.com/css2?family=Google+Sans+Flex:opsz,wght@8..144,100..1000&family=Google+Sans+Code:wght@300;400;500;600&display=swap" rel="stylesheet">
 
 <style>
@@ -23,36 +25,40 @@ body {
   padding: 32px;
   border-radius: 28px;
   box-shadow: 0 6px 24px rgba(0,0,0,0.08);
-  width: 460px;
+  width: 560px;
   text-align: center;
 }
 
 .operacion {
   font-family: "Google Sans Code", monospace;
   font-size: 44px;
-  text-align: right;
   margin-top: 24px;
+}
+
+.fila {
+  display: grid;
+  justify-content: end;
+  gap: 4px;
+}
+
+.celda {
+  width: 48px;
+  text-align: center;
 }
 
 .linea {
   border-bottom: 3px solid #333;
-  margin: 6px 0 10px 0;
-}
-
-.resultado {
-  display: flex;
-  justify-content: flex-end;
+  margin: 8px 0;
 }
 
 .resultado input {
-  width: 42px;
+  width: 48px;
   font-size: 44px;
   text-align: center;
   border: none;
   border-bottom: 2px solid #ccc;
   outline: none;
   font-family: "Google Sans Code", monospace;
-  margin-left: 4px;
 }
 
 .resultado input.error {
@@ -77,7 +83,7 @@ body {
 <div class="card" id="menu">
   <h2>Rebajaceros</h2>
 
-  <p>Haz las 10 restas para llegar a 0!</p>
+  <p>Resta 10 veces hasta llegar a 0! </p>
   <md-outlined-text-field id="cifras" type="number" value="6"></md-outlined-text-field>
 
   <br><br>
@@ -136,20 +142,37 @@ function empezarJuego(numero){
 function crearOperacion(){
 
   if(actual===0){
-    document.getElementById("juego").innerHTML=
+    document.getElementById("juego").innerHTML =
       "<h2>¡Has llegado a 0!</h2><br><md-filled-button onclick='volverMenu()'>Volver</md-filled-button>";
     return;
   }
 
   let correcto = (actual - restaFija).toString();
 
+  let maxColumnas = Math.max(
+    actual.toString().length,
+    restaFija.toString().length,
+    correcto.length
+  );
+
   let html = `
   <h3>Resta paso a paso</h3>
   <div class="operacion">
-      <div>${actual}</div>
-      <div>- ${restaFija}</div>
+
+      <div class="fila" style="grid-template-columns: repeat(${maxColumnas}, 48px)">
+        ${generarCeldas(actual.toString(), maxColumnas)}
+      </div>
+
+      <div class="fila" style="grid-template-columns: repeat(${maxColumnas}, 48px)">
+        ${generarCeldas(restaFija.toString(), maxColumnas, true)}
+      </div>
+
       <div class="linea"></div>
-      <div class="resultado" id="resultado"></div>
+
+      <div class="fila resultado" id="resultado"
+           style="grid-template-columns: repeat(${maxColumnas}, 48px)">
+      </div>
+
   </div>
 
   <div class="botones">
@@ -163,48 +186,57 @@ function crearOperacion(){
 
   let contenedor = document.getElementById("resultado");
 
-  // Creamos inputs de izquierda a derecha pero enfocamos el último
-  for(let i=0;i<correcto.length;i++){
+  for(let i=0;i<maxColumnas;i++){
     let input = document.createElement("input");
     input.maxLength=1;
-    input.dataset.index=i;
-
     input.addEventListener("input", manejarEscritura);
     input.addEventListener("keydown", manejarBorrado);
-
     contenedor.appendChild(input);
   }
 
-  // Enfocar último (derecha)
   contenedor.lastChild.focus();
+}
+
+function generarCeldas(numeroStr, total, esResta=false){
+  let espacios = total - numeroStr.length;
+  let contenido = "";
+
+  for(let i=0;i<espacios;i++){
+    contenido += `<div class="celda"></div>`;
+  }
+
+  for(let i=0;i<numeroStr.length;i++){
+    if(esResta && i===0){
+      contenido += `<div class="celda">-${numeroStr[i]}</div>`;
+    }else{
+      contenido += `<div class="celda">${numeroStr[i]}</div>`;
+    }
+  }
+
+  return contenido;
 }
 
 function manejarEscritura(e){
   let input = e.target;
-  let valor = input.value.replace(/[^0-9]/g,"");
-  input.value = valor;
+  input.value = input.value.replace(/[^0-9]/g,"");
 
-  if(valor.length===1){
+  if(input.value.length===1){
     let anterior = input.previousElementSibling;
-    if(anterior){
-      anterior.focus();
-    }
+    if(anterior) anterior.focus();
   }
 }
 
 function manejarBorrado(e){
   if(e.key==="Backspace" && e.target.value===""){
     let siguiente = e.target.nextElementSibling;
-    if(siguiente){
-      siguiente.focus();
-    }
+    if(siguiente) siguiente.focus();
   }
 }
 
 function comprobar(){
   let correcto = (actual - restaFija).toString();
   let inputs = document.querySelectorAll(".resultado input");
-  let todoBien=true;
+  let todoBien = true;
 
   inputs.forEach((input,i)=>{
     if(input.value!==correcto[i]){
